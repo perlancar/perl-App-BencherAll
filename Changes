@@ -1,5 +1,15 @@
 Revision history for App-BencherAll
 
+0.02    2016-01-07 (PERLANCAR)
+
+        - Trap when bencher dies, so we can continue to the next scenario.
+
+        - [build] Rebuild with updated DZP:GenPericmdScript which now properly
+          adds prereq to Log::Any.
+
+        - Other small fixes.
+
+
 0.01    2016-01-07 (PERLANCAR)
 
         - First release.
