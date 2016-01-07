@@ -152,43 +152,49 @@ sub bencher_all {
         local @INC = ("lib", @INC);
         for my $sn (@scenarios) {
             $log->infof("Processing scenario %s ...", $sn);
-            my $res;
+            eval {
+                my $res;
 
-            my $timestamp = strftime("%Y-%m-%dT%H-%M-%S", localtime);
-            my $sn_encoded = $sn; $sn_encoded =~ s/::/-/g;
+                my $timestamp = strftime("%Y-%m-%dT%H-%M-%S", localtime);
+                my $sn_encoded = $sn; $sn_encoded =~ s/::/-/g;
 
-            $res = Bencher::bencher(
-                action => 'show-scenario',
-                scenario_module => $sn);
-            return err("Can't show scenario", $res) unless $res->[0] == 200;
-            my $scenario = $res->[2];
+                $res = Bencher::bencher(
+                    action => 'show-scenario',
+                    scenario_module => $sn);
+                return err("Can't show scenario", $res) unless $res->[0] == 200;
+                my $scenario = $res->[2];
 
-            $res = Bencher::bencher(
-                action => 'list-participant-modules',
-                scenario_module => $sn);
-            return err("Can't list participant modules", $res)
-                unless $res->[0] == 200;
-            my $modules = $res->[2];
+                $res = Bencher::bencher(
+                    action => 'list-participant-modules',
+                    scenario_module => $sn);
+                return err("Can't list participant modules", $res)
+                    unless $res->[0] == 200;
+                my $modules = $res->[2];
 
-            $res = Bencher::bencher(
-                action => 'bench',
-                scenario_module => $sn);
-            return err("Can't bench", $res) unless $res->[0] == 200;
-            my $filename = "$args{log_dir}/$sn_encoded.$timestamp.json";
-            $log->tracef("Writing file %s ...", $filename);
-            write_text($filename, encode_json($res));
-
-            if (!$scenario->{module_startup} && @$modules) {
                 $res = Bencher::bencher(
                     action => 'bench',
-                    module_startup => 1,
                     scenario_module => $sn);
-                return err("Can't bench (module_startup)", $res)
-                    unless $res->[0] == 200;
-                my $filename = "$args{log_dir}/$sn_encoded.module_startup.".
-                    "$timestamp.json",
+                return err("Can't bench", $res) unless $res->[0] == 200;
+                my $filename = "$args{log_dir}/$sn_encoded.$timestamp.json";
                 $log->tracef("Writing file %s ...", $filename);
                 write_text($filename, encode_json($res));
+
+                if (!$scenario->{module_startup} && @$modules) {
+                    $res = Bencher::bencher(
+                        action => 'bench',
+                        module_startup => 1,
+                        scenario_module => $sn);
+                    return err("Can't bench (module_startup)", $res)
+                        unless $res->[0] == 200;
+                    my $filename = "$args{log_dir}/$sn_encoded.module_startup.".
+                        "$timestamp.json",
+                        $log->tracef("Writing file %s ...", $filename);
+                    write_text($filename, encode_json($res));
+                }
+            }; # eval
+
+            if ($@) {
+                $log->error("Dies (%s), skipping to the next scenario", $@);
             }
         } # for scenario
     }
