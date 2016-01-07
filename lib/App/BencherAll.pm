@@ -26,6 +26,12 @@ $SPEC{bencher_all} = {
 This script provides a convenience way to run all bencher scenarios and store
 the results as JSON files in a directory, for archival purpose.
 
+By default, bencher results are stored as JSON in the `log_dir` directory, with
+the following name pattern:
+
+    <NAME>-<SUBNAME>.<yyyy>-<mm>-<dd>T<HH>-<MM>-<SS>.json
+    <NAME>-<SUBNAME>.module_startup.<yyyy>-<mm>-<dd>T<HH>-<MM>-<SS>.json
+
 _
     args => {
         log_dir => {
@@ -116,7 +122,7 @@ sub bencher_all {
             $filtered++;
             my @fscenarios;
             for my $s (@scenarios) {
-                next unless grep {ref($_) eq 'Regexp' $s =~ $_ : $s =~ /$_/ }
+                next unless grep {ref($_) eq 'Regexp' ? $s =~ $_ : $s =~ /$_/ }
                     @{ $args{include_patterns} };
                 push @fscenarios, $s;
             }
@@ -126,7 +132,7 @@ sub bencher_all {
             $filtered++;
             my @fscenarios;
             for my $s (@scenarios) {
-                next if grep {ref($_) eq 'Regexp' $s =~ $_ : $s =~ /$_/ }
+                next if grep {ref($_) eq 'Regexp' ? $s =~ $_ : $s =~ /$_/ }
                     @{ $args{exclude_patterns} };
                 push @fscenarios, $s;
             }
@@ -148,7 +154,8 @@ sub bencher_all {
             $log->infof("Processing scenario %s ...", $sn);
             my $res;
 
-            my $time = strftime("%Y-%m-%dT%H:%M:%S", localtime);
+            my $timestamp = strftime("%Y-%m-%dT%H-%M-%S", localtime);
+            my $sn_encoded = $sn; $sn_encoded =~ s/::/-/g;
 
             $res = Bencher::bencher(
                 action => 'show-scenario',
@@ -167,7 +174,7 @@ sub bencher_all {
                 action => 'bench',
                 scenario_module => $sn);
             return err("Can't bench", $res) unless $res->[0] == 200;
-            my $filename = "$args{log_dir}/$sn.$time", encode_json($res);
+            my $filename = "$args{log_dir}/$sn_encoded.$timestamp.json";
             $log->tracef("Writing file %s ...", $filename);
             write_text($filename, encode_json($res));
 
@@ -178,8 +185,8 @@ sub bencher_all {
                     scenario_module => $sn);
                 return err("Can't bench (module_startup)", $res)
                     unless $res->[0] == 200;
-                my $filename = "$args{log_dir}/$sn-module_startup.$time",
-                    encode_json($res);
+                my $filename = "$args{log_dir}/$sn_encoded.module_startup.".
+                    "$timestamp.json",
                 $log->tracef("Writing file %s ...", $filename);
                 write_text($filename, encode_json($res));
             }
