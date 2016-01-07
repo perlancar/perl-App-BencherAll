@@ -203,7 +203,7 @@ sub bencher_all {
 }
 
 $SPEC{bencher_all_under_lib} = do {
-    my $meta = $SPEC{bencher_all};
+    my $meta = clone($SPEC{bencher_all});
     delete $meta->{args}{no_lib};
     delete $meta->{args}{libs};
     $meta->{summary} = "Shortcut for bencher-all --no-lib --lib lib";
