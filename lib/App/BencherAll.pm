@@ -209,7 +209,7 @@ sub bencher_all_under_lib {
 }
 
 1;
-# ABSTRACT:
+# ABSTRACT: Find all installed Bencher scenarios, run them, log results
 
 =head1 SYNOPSIS
 
