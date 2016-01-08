@@ -168,6 +168,14 @@ sub bencher_all {
                 my $sn_encoded = $sn; $sn_encoded =~ s/::/-/g;
 
                 $res = Bencher::bencher(
+                    action => 'bench',
+                    scenario_module => $sn);
+                return err("Can't bench", $res) unless $res->[0] == 200;
+                my $filename = "$args{log_dir}/$sn_encoded.$timestamp.json";
+                $log->tracef("Writing file %s ...", $filename);
+                write_text($filename, encode_json($res));
+
+                $res = Bencher::bencher(
                     action => 'show-scenario',
                     scenario_module => $sn);
                 return err("Can't show scenario", $res) unless $res->[0] == 200;
@@ -179,14 +187,6 @@ sub bencher_all {
                 return err("Can't list participant modules", $res)
                     unless $res->[0] == 200;
                 my $modules = $res->[2];
-
-                $res = Bencher::bencher(
-                    action => 'bench',
-                    scenario_module => $sn);
-                return err("Can't bench", $res) unless $res->[0] == 200;
-                my $filename = "$args{log_dir}/$sn_encoded.$timestamp.json";
-                $log->tracef("Writing file %s ...", $filename);
-                write_text($filename, encode_json($res));
 
                 if (!$scenario->{module_startup} && @$modules) {
                     $res = Bencher::bencher(
