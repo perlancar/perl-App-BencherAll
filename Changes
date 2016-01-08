@@ -1,5 +1,22 @@
 Revision history for App-BencherUtils
 
+0.03    2016-01-08 (PERLANCAR)
+
+	- Rename module/dist from App-BencherAll to App-BencherUtils.
+
+        - Add script: list-bencher-results.
+
+	- [Incompatible change] option 'log_dir' is now renamed to
+          'results_dir'.
+
+	- Add option --precision-limit (passed to bencher).
+
+	- [Bugfix] Reorder: we now bench first to let all the hooks
+	  properly executed the first time.
+
+	- [ux] bencher-all*: Add completion for --include & --exclude.
+
+
 0.02    2016-01-07 (PERLANCAR)
 
         - Trap when bencher dies, so we can continue to the next scenario.
