@@ -145,21 +145,29 @@ sub bencher_all {
 
   FILTER:
     {
+        # normalize
+        my $includes = [
+            map {s!/!::!g; $_} @{ $args{includes} // [] }
+        ];
+        my $excludes = [
+            map {s!/!::!g; $_} @{ $args{excludes} // [] }
+        ];
+
         my $filtered;
-        if ($args{includes} && @{ $args{includes} }) {
+        if (@$includes) {
             $filtered++;
             my @fscenarios;
             for my $s (@scenarios) {
-                next unless grep {$s eq $_} @{ $args{includes} };
+                next unless grep {$s eq $_} @$includes;
                 push @fscenarios, $s;
             }
             @scenarios = @fscenarios;
         }
-        if ($args{excludes} && @{ $args{excludes} }) {
+        if (@$excludes) {
             $filtered++;
             my @fscenarios;
             for my $s (@scenarios) {
-                next if grep {$s eq $_} @{ $args{excludes} };
+                next if grep {$s eq $_} @$excludes;
                 push @fscenarios, $s;
             }
             @scenarios = @fscenarios;
@@ -372,6 +380,14 @@ sub list_bencher_results {
 
     opendir my($dh), $dir or return [500, "Can't read results_dir `$dir`: $!"];
 
+    # normalize
+    my $include_scenarios = [
+        map {s!/!::!g; $_} @{ $args{include_scenarios} // [] }
+    ];
+    my $exclude_scenarios = [
+        map {s!/!::!g; $_} @{ $args{exclude_scenarios} // [] }
+    ];
+
     my @rows;
   FILE:
     for my $filename (sort readdir $dh) {
@@ -383,11 +399,11 @@ sub list_bencher_results {
             time => "$3-$4-$5T$6:$7:$8",
         };
         $row->{scenario} =~ s/-/::/g;
-        if ($args{include_scenarios} && @{ $args{include_scenarios} }) {
-            next FILE unless grep {$row->{scenario} eq $_} @{ $args{include_scenarios} };
+        if (@$include_scenarios) {
+            next FILE unless grep {$row->{scenario} eq $_} @$include_scenarios;
         }
-        if ($args{exclude_scenarios} && @{ $args{exclude_scenarios} }) {
-            next FILE if grep {$row->{scenario} eq $_} @{ $args{exclude_scenarios} };
+        if (@$exclude_scenarios) {
+            next FILE if grep {$row->{scenario} eq $_} @$exclude_scenarios;
         }
 
         my $benchres = _json->decode(File::Slurper::read_text("$dir/$filename"));
