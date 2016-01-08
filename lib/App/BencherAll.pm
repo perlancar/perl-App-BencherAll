@@ -8,15 +8,39 @@ use strict;
 use warnings;
 use Log::Any::IfLOG '$log';
 
-use Bencher;
-use File::Slurper qw(write_text);
 use Function::Fallback::CoreOrPP qw(clone);
-use JSON qw(encode_json);
 use Perinci::Sub::Util qw(err);
-use PERLANCAR::Module::List;
 use POSIX qw(strftime);
 
 our %SPEC;
+
+my %args_common = (
+    results_dir => {
+        summary => 'Directory to store results files in',
+        schema => 'str*',
+        req => 1,
+    },
+);
+
+my %args_common_query = (
+    query => {
+        schema => ['array*', of=>'str*'],
+        pos => 0,
+        greedy => 1,
+    },
+    detail => {
+        schema => 'bool',
+        cmdline_aliases => {l=>{}},
+    },
+);
+
+sub _json {
+    state $json = do {
+        require JSON;
+        JSON->new;
+    };
+    $json;
+}
 
 sub _complete_scenario_module {
     require Complete::Module;
@@ -33,18 +57,15 @@ $SPEC{bencher_all} = {
 This script provides a convenience way to run all bencher scenarios and store
 the results as JSON files in a directory, for archival purpose.
 
-By default, bencher results are stored as JSON in the `log_dir` directory, with
-the following name pattern:
+By default, bencher results are stored as JSON in the `results_dir` directory,
+with the following name pattern:
 
     <NAME>-<SUBNAME>.<yyyy>-<mm>-<dd>T<HH>-<MM>-<SS>.json
     <NAME>-<SUBNAME>.module_startup.<yyyy>-<mm>-<dd>T<HH>-<MM>-<SS>.json
 
 _
     args => {
-        log_dir => {
-            schema => 'str*',
-            req => 1,
-        },
+        %args_common,
         no_lib => {
             summary => 'Remove entries from @INC',
             schema => ['bool*', is=>1],
@@ -96,11 +117,16 @@ _
     },
 };
 sub bencher_all {
+    require Bencher;
+    require File::Slurper;
+
     my %args = @_;
 
     # find all installed scenarios
     my @scenarios;
     {
+        require PERLANCAR::Module::List;
+
         local @INC = @INC;
         @INC = () if $args{no_lib};
         unshift @INC, reverse(@{$args{libs}}) if $args{libs};
@@ -179,9 +205,9 @@ sub bencher_all {
                     precision_limit => $args{precision_limit},
                 );
                 return err("Can't bench", $res) unless $res->[0] == 200;
-                my $filename = "$args{log_dir}/$sn_encoded.$timestamp.json";
+                my $filename = "$args{results_dir}/$sn_encoded.$timestamp.json";
                 $log->tracef("Writing file %s ...", $filename);
-                write_text($filename, encode_json($res));
+                File::Slurper::write_text($filename, _json->encode($res));
 
                 $res = Bencher::bencher(
                     action => 'show-scenario',
@@ -203,10 +229,10 @@ sub bencher_all {
                         scenario_module => $sn);
                     return err("Can't bench (module_startup)", $res)
                         unless $res->[0] == 200;
-                    my $filename = "$args{log_dir}/$sn_encoded.module_startup.".
+                    my $filename = "$args{results_dir}/$sn_encoded.module_startup.".
                         "$timestamp.json",
                         $log->tracef("Writing file %s ...", $filename);
-                    write_text($filename, encode_json($res));
+                    File::Slurper::write_text($filename, _json->encode($res));
                 }
             }; # eval
 
@@ -229,6 +255,189 @@ $SPEC{bencher_all_under_lib} = do {
 };
 sub bencher_all_under_lib {
     bencher_all(@_, no_lib=>1, libs=>["lib"]);
+}
+
+my $re_filename = qr/\A
+                     (\w+(?:-(?:\w+))*)
+                     (\.module_startup)?
+                     \.(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d)-(\d\d)-(\d\d)
+                     \.json
+                     \z/x;
+
+sub _complete_scenario_in_results_dir {
+    require Complete::Util;
+
+    my %args = @_;
+    my $word = $args{word};
+    my $cmdline = $args{cmdline};
+    my $r = $args{r};
+
+    return undef unless $cmdline;
+
+    $r->{read_config} = 1;
+
+    my $res = $cmdline->parse_argv($r);
+    return undef unless $res->[0] == 200;
+
+    # combine from command-line and from config/env
+    my $final_args = { %{$res->[2]}, %{$args{args}} };
+    #$log->tracef("final args=%s", $final_args);
+
+    return [] unless $final_args->{results_dir};
+
+    my %scenarios;
+
+    opendir my($dh), $final_args->{results_dir} or return undef;
+    for my $filename (readdir $dh) {
+        $filename =~ $re_filename or next;
+        my $sc = $1; $sc =~ s/-/::/g;
+        $scenarios{$sc}++;
+    }
+
+    Complete::Util::complete_hash_key(hash=>\%scenarios, word=>$word);
+}
+
+$SPEC{list_bencher_results} = {
+    v => 1.1,
+    summary => "List results in results directory",
+    args => {
+        %args_common,
+        %args_common_query,
+
+        include_scenarios => {
+            'x.name.is_plural' => 1,
+            schema => ['array*', of=>'str*'],
+            tags => ['category:filtering'],
+            element_completion => \&_complete_scenario_in_results_dir,
+        },
+        exclude_scenarios => {
+            'x.name.is_plural' => 1,
+            schema => ['array*', of=>'str*'],
+            tags => ['category:filtering'],
+            element_completion => \&_complete_scenario_in_results_dir,
+        },
+        module_startup => {
+            schema => 'bool*',
+            tags => ['category:filtering'],
+        },
+
+        fmt => {
+            summary => 'Display each result with bencher-fmt',
+            schema => 'bool*',
+            tags => ['category:display'],
+        },
+    },
+    examples => [
+        {
+            summary => 'List all results',
+            src => 'list-bencher-results',
+            src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
+        {
+            summary => 'List all results, show detail information',
+            src => 'list-bencher-results -l',
+            src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
+        {
+            summary => 'List matching results only',
+            src => 'list-bencher-results --exclude-scenario Perl::Startup Startup',
+            src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
+        {
+            summary => 'List matching results, format all using bencher-fmt',
+            src => 'list-bencher-results --exclude-scenario Perl::Startup Startup --fmt',
+            src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
+    ],
+};
+sub list_bencher_results {
+    require File::Slurper;
+
+    my %args = @_;
+
+    my $dir = $args{results_dir};
+
+    opendir my($dh), $dir or return [500, "Can't read results_dir `$dir`: $!"];
+
+    my @rows;
+  FILE:
+    for my $filename (sort readdir $dh) {
+        next unless $filename =~ $re_filename;
+        my $row = {
+            filename => $filename,
+            scenario => $1,
+            module_startup => $2 ? 1:0,
+            time => "$3-$4-$5T$6:$7:$8",
+        };
+        $row->{scenario} =~ s/-/::/g;
+        if ($args{include_scenarios} && @{ $args{include_scenarios} }) {
+            next FILE unless grep {$row->{scenario} eq $_} @{ $args{include_scenarios} };
+        }
+        if ($args{exclude_scenarios} && @{ $args{exclude_scenarios} }) {
+            next FILE if grep {$row->{scenario} eq $_} @{ $args{exclude_scenarios} };
+        }
+
+        my $benchres = _json->decode(File::Slurper::read_text("$dir/$filename"));
+        $row->{res} = $benchres;
+        $row->{cpu} = $benchres->[3]{'func.cpu_info'}[0]{name};
+
+        $row->{module_startup} = 1 if $benchres->[3]{'func.module_startup'};
+
+        if (defined $args{module_startup}) {
+            next FILE if $row->{module_startup} xor $args{module_startup};
+        }
+
+        if ($args{query} && @{ $args{query} }) {
+            my $matches = 1;
+          QUERY_WORD:
+            for my $q (@{ $args{query} }) {
+                my $lq = lc($q);
+                if (index(lc($row->{cpu}), $lq) == -1 &&
+                        index(lc($row->{filename}), $lq) == -1 &&
+                        index(lc($row->{scenario}), $lq) == -1
+                ) {
+                    $matches = 0;
+                    last;
+                }
+            }
+            next unless $matches;
+        }
+
+        push @rows, $row;
+    }
+
+    my $resmeta = {};
+    if ($args{fmt}) {
+        require Bencher;
+        require Perinci::Result::Format::Lite;
+
+        $resmeta->{'cmdline.skip_format'} = 1;
+        my @content;
+        for my $row (@rows) {
+            push @content, "$row->{filename} (cpu: $row->{cpu}):\n";
+            my $res = Bencher::format_result($row->{res});
+            push @content, Perinci::Result::Format::Lite::format(
+                $res, "text-pretty");
+            push @content, "\n";
+        }
+        return [200, "OK", join("", @content), $resmeta];
+    } else {
+        delete($_->{res}) for @rows;
+        if ($args{detail}) {
+            $resmeta->{'table.fields'} = [qw(scenario module_startup time cpu filename)];
+        } else {
+            @rows = map {$_->{filename}} @rows;
+        }
+        return [200, "OK", \@rows, $resmeta];
+    }
 }
 
 1;
