@@ -1,4 +1,4 @@
-package App::BencherAll;
+package App::BencherUtils;
 
 # DATE
 # VERSION
@@ -13,6 +13,11 @@ use Perinci::Sub::Util qw(err);
 use POSIX qw(strftime);
 
 our %SPEC;
+
+$SPEC{':package'} = {
+    v => 1.1,
+    summary => 'Utilities related to bencher',
+};
 
 my %args_common = (
     results_dir => {
@@ -441,8 +446,12 @@ sub list_bencher_results {
 }
 
 1;
-# ABSTRACT: Find all installed Bencher scenarios, run them, log results
+# ABSTRACT:
 
 =head1 SYNOPSIS
 
-See L<bencher-all> and L<bencher-all-under-lib>.
+=head1 DESCRIPTION
+
+This distribution includes several utilities:
+
+#INSERT_EXECS_LIST
