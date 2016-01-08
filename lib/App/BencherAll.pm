@@ -84,6 +84,12 @@ _
             schema => ['array*', of=>'re*'],
             tags => ['category:filtering'],
         },
+
+        precision_limit => {
+            summary => 'Precision limit, passed to bencher',
+            schema => ['float*', between=>[0,1]],
+            tags => ['category:bencher'],
+        },
     },
     features => {
         dry_run => 1,
@@ -169,7 +175,9 @@ sub bencher_all {
 
                 $res = Bencher::bencher(
                     action => 'bench',
-                    scenario_module => $sn);
+                    scenario_module => $sn,
+                    precision_limit => $args{precision_limit},
+                );
                 return err("Can't bench", $res) unless $res->[0] == 200;
                 my $filename = "$args{log_dir}/$sn_encoded.$timestamp.json";
                 $log->tracef("Writing file %s ...", $filename);
