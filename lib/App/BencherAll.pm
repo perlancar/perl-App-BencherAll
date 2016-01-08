@@ -18,6 +18,13 @@ use POSIX qw(strftime);
 
 our %SPEC;
 
+sub _complete_scenario_module {
+    require Complete::Module;
+    my %args = @_;
+    Complete::Module::complete_module(
+        word=>$args{word}, ns_prefix=>'Bencher::Scenario');
+}
+
 $SPEC{bencher_all} = {
     v => 1.1,
     summary => 'Find all installed Bencher scenarios, run them, log results',
@@ -56,12 +63,14 @@ _
             summary => 'Scenarios to exclude',
             schema => ['array*', of=>'str*'],
             tags => ['category:filtering'],
+            element_completion => \&_complete_scenario_module,
         },
         includes => {
             'x.name.is_plural' => 1,
             summary => 'Scenarios to include',
             schema => ['array*', of=>'str*'],
             tags => ['category:filtering'],
+            element_completion => \&_complete_scenario_module,
         },
         exclude_patterns => {
             'x.name.is_plural' => 1,
