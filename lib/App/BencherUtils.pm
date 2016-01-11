@@ -333,6 +333,12 @@ $SPEC{list_bencher_results} = {
             schema => 'bool*',
             tags => ['category:filtering'],
         },
+        latest => {
+            'summary.alt.bool.yes' => 'Only list the latest result for every scenario+CPU',
+            'summary.alt.bool.no'  => 'Do not list the latest result for every scenario+CPU',
+            schema => ['bool*'],
+            tags => ['category:filtering'],
+        },
 
         fmt => {
             summary => 'Display each result with bencher-fmt',
@@ -388,6 +394,7 @@ sub list_bencher_results {
         map {s!/!::!g; $_} @{ $args{exclude_scenarios} // [] }
     ];
 
+    my %latest; # key = module+(module_startup)+cpu, value = latest row
     my @rows;
   FILE:
     for my $filename (sort readdir $dh) {
@@ -416,6 +423,13 @@ sub list_bencher_results {
             next FILE if $row->{module_startup} xor $args{module_startup};
         }
 
+        my $key = sprintf(
+            "%s.%s.%s",
+            $row->{scenario},
+            $row->{module_startup} ? 0:1,
+            $row->{cpu},
+        );
+
         if ($args{query} && @{ $args{query} }) {
             my $matches = 1;
           QUERY_WORD:
@@ -432,8 +446,26 @@ sub list_bencher_results {
             next unless $matches;
         }
 
+        if (!$latest{$key} || $latest{$key}{time} lt $row->{time}) {
+            $latest{$key} = $row;
+        }
+        $row->{_key} = $key;
+
         push @rows, $row;
     }
+
+    # we do the 'latest' filter here after we get all the rows
+    if (defined $args{latest}) {
+        my @rows0 = @rows;
+        @rows = grep {
+            my $latest_time = $latest{ $_->{_key} }{time};
+            $args{latest} ?
+                $_->{time} eq $latest_time :
+                $_->{time} ne $latest_time;
+        } @rows;
+    }
+
+    for (@rows) { delete $_->{_key} }
 
     my $resmeta = {};
     if ($args{fmt}) {
