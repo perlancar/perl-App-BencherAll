@@ -375,6 +375,20 @@ $SPEC{list_bencher_results} = {
             test => 0,
             'x.doc.show_result' => 0,
         },
+        {
+            summary => 'List latest result for each scenario+CPU',
+            src => 'list-bencher-results QUERY --latest',
+            src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
+        {
+            summary => 'Delete old results',
+            src => 'cd RESULTS_DIR; list-bencher-results --no-latest | xargs rm',
+            src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
     ],
 };
 sub list_bencher_results {
