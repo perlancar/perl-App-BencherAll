@@ -1,5 +1,12 @@
 Revision history for App-BencherUtils
 
+0.04    2016-01-11 (PERLANCAR)
+
+	- list-bencher-results: Add option --latest (and --no-latest too).
+
+	- Normalize Module/SubModule into Module::SubModule.
+
+
 0.03    2016-01-08 (PERLANCAR)
 
 	- Rename module/dist from App-BencherAll to App-BencherUtils.
