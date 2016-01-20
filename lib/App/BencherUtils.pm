@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use Log::Any::IfLOG '$log';
 
+use Data::Clean::JSON;
 use Function::Fallback::CoreOrPP qw(clone);
 use Perinci::Sub::Util qw(err);
 use POSIX qw(strftime);
@@ -39,12 +40,24 @@ my %args_common_query = (
     },
 );
 
+sub _clean {
+    state $cleanser = Data::Clean::JSON->get_cleanser;
+    $cleanser->clone_and_clean($_[0]);
+}
+
 sub _json {
     state $json = do {
         require JSON;
-        JSON->new;
+        my $json = JSON->new;
+        $json->convert_blessed(1);
     };
     $json;
+}
+
+sub _encode_json {
+    no strict 'refs';
+    local *version::TO_JSON = sub { "$_[0]" };
+    _json->encode($_[0]);
 }
 
 sub _complete_scenario_module {
@@ -220,7 +233,8 @@ sub bencher_all {
                 return err("Can't bench", $res) unless $res->[0] == 200;
                 my $filename = "$args{results_dir}/$sn_encoded.$timestamp.json";
                 $log->tracef("Writing file %s ...", $filename);
-                File::Slurper::write_text($filename, _json->encode($res));
+                File::Slurper::write_text($filename,
+                                          _clean(_encode_json($res)));
 
                 $res = Bencher::bencher(
                     action => 'show-scenario',
@@ -245,12 +259,13 @@ sub bencher_all {
                     my $filename = "$args{results_dir}/$sn_encoded.module_startup.".
                         "$timestamp.json",
                         $log->tracef("Writing file %s ...", $filename);
-                    File::Slurper::write_text($filename, _json->encode($res));
+                    File::Slurper::write_text($filename,
+                                              _clean(_encode_json($res)));
                 }
             }; # eval
 
             if ($@) {
-                $log->error("Dies (%s), skipping to the next scenario", $@);
+                $log->errorf("Dies (%s), skipping to the next scenario", $@);
             }
         } # for scenario
     }
