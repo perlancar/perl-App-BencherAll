@@ -1,5 +1,12 @@
 Revision history for App-BencherUtils
 
+0.05    2016-01-20 (PERLANCAR)
+
+	- Clean JSON so it's safe to write to file.
+
+	- list-bencher-reulsts: Add a couple of examples.
+
+
 0.04    2016-01-11 (PERLANCAR)
 
 	- list-bencher-results: Add option --latest (and --no-latest too).
