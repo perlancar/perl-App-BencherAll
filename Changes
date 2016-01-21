@@ -1,5 +1,12 @@
 Revision history for App-BencherUtils
 
+0.06    2016-01-21 (PERLANCAR)
+
+        - No functional changes.
+
+        - [build] Rebuild to fix POD (related to multiple config filenames).
+
+
 0.05    2016-01-20 (PERLANCAR)
 
 	- Clean JSON so it's safe to write to file.
