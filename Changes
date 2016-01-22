@@ -1,5 +1,10 @@
 Revision history for App-BencherUtils
 
+0.07    2016-01-22 (PERLANCAR)
+
+	- bencher-all: Add option --note (passed to bencher).
+
+
 0.06    2016-01-21 (PERLANCAR)
 
         - No functional changes.
