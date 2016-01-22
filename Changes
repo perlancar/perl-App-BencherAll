@@ -1,5 +1,12 @@
 Revision history for App-BencherUtils
 
+0.09    2016-01-22 (PERLANCAR)
+
+	- [Bugfix] list-bencher-results: Forgot to adjust to Bencher 0.30+
+	  (format_result() now returns formatted string) causing --fmt to
+	  break.
+
+
 0.08    2016-01-22 (PERLANCAR)
 
 	- [Bugfix] Forgot to pass note to bencher, derp.
