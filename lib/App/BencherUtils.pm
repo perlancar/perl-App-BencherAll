@@ -234,6 +234,7 @@ sub bencher_all {
                     action => 'bench',
                     scenario_module => $sn,
                     precision_limit => $args{precision_limit},
+                    (note => $args{note}) x !!(exists $args{note}),
                 );
                 return err("Can't bench", $res) unless $res->[0] == 200;
                 my $filename = "$args{results_dir}/$sn_encoded.$timestamp.json";
@@ -258,7 +259,10 @@ sub bencher_all {
                     $res = Bencher::bencher(
                         action => 'bench',
                         module_startup => 1,
-                        scenario_module => $sn);
+                        scenario_module => $sn,
+                        precision_limit => $args{precision_limit},
+                        (note => $args{note}) x !!(exists $args{note}),
+                    );
                     return err("Can't bench (module_startup)", $res)
                         unless $res->[0] == 200;
                     my $filename = "$args{results_dir}/$sn_encoded.module_startup.".
