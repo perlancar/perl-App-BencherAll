@@ -508,15 +508,12 @@ sub list_bencher_results {
     my $resmeta = {};
     if ($args{fmt}) {
         require Bencher;
-        require Perinci::Result::Format::Lite;
 
         $resmeta->{'cmdline.skip_format'} = 1;
         my @content;
         for my $row (@rows) {
             push @content, "$row->{filename} (cpu: $row->{cpu}):\n";
-            my $res = Bencher::format_result($row->{res});
-            push @content, Perinci::Result::Format::Lite::format(
-                $res, "text-pretty");
+            push @content, Bencher::format_result($row->{res});
             push @content, "\n";
         }
         return [200, "OK", join("", @content), $resmeta];
