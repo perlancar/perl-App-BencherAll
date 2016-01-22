@@ -129,6 +129,11 @@ _
             schema => ['float*', between=>[0,1]],
             tags => ['category:bencher'],
         },
+        note => {
+            summary => 'Additional note, passed to bencher',
+            schema => 'str*',
+            tags => ['category:bencher'],
+        },
     },
     features => {
         dry_run => 1,
