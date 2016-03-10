@@ -47,8 +47,8 @@ sub _clean {
 
 sub _json {
     state $json = do {
-        require JSON;
-        my $json = JSON->new;
+        require JSON::MaybeXS;
+        my $json = JSON::MaybeXS->new;
         $json->convert_blessed(1);
     };
     $json;
