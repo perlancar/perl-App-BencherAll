@@ -140,7 +140,7 @@ _
     },
 };
 sub bencher_all {
-    require Bencher;
+    require Bencher::Backend;
     require File::Slurper;
 
     my %args = @_;
@@ -230,7 +230,7 @@ sub bencher_all {
                 my $timestamp = strftime("%Y-%m-%dT%H-%M-%S", localtime);
                 my $sn_encoded = $sn; $sn_encoded =~ s/::/-/g;
 
-                $res = Bencher::bencher(
+                $res = Bencher::Backend::bencher(
                     action => 'bench',
                     scenario_module => $sn,
                     precision_limit => $args{precision_limit},
@@ -242,13 +242,13 @@ sub bencher_all {
                 File::Slurper::write_text($filename,
                                           _clean(_encode_json($res)));
 
-                $res = Bencher::bencher(
+                $res = Bencher::Backend::bencher(
                     action => 'show-scenario',
                     scenario_module => $sn);
                 return err("Can't show scenario", $res) unless $res->[0] == 200;
                 my $scenario = $res->[2];
 
-                $res = Bencher::bencher(
+                $res = Bencher::Backend::bencher(
                     action => 'list-participant-modules',
                     scenario_module => $sn);
                 return err("Can't list participant modules", $res)
@@ -256,7 +256,7 @@ sub bencher_all {
                 my $modules = $res->[2];
 
                 if (!$scenario->{module_startup} && @$modules) {
-                    $res = Bencher::bencher(
+                    $res = Bencher::Backend::bencher(
                         action => 'bench',
                         module_startup => 1,
                         scenario_module => $sn,
@@ -507,13 +507,13 @@ sub list_bencher_results {
 
     my $resmeta = {};
     if ($args{fmt}) {
-        require Bencher;
+        require Bencher::Backend;
 
         $resmeta->{'cmdline.skip_format'} = 1;
         my @content;
         for my $row (@rows) {
             push @content, "$row->{filename} (cpu: $row->{cpu}):\n";
-            push @content, Bencher::format_result($row->{res});
+            push @content, Bencher::Backend::format_result($row->{res});
             push @content, "\n";
         }
         return [200, "OK", join("", @content), $resmeta];
