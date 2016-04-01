@@ -240,7 +240,7 @@ sub bencher_all {
                 my $filename = "$args{results_dir}/$sn_encoded.$timestamp.json";
                 $log->tracef("Writing file %s ...", $filename);
                 File::Slurper::write_text($filename,
-                                          _clean(_encode_json($res)));
+                                          _encode_json(_clean($res)));
 
                 $res = Bencher::Backend::bencher(
                     action => 'show-scenario',
@@ -269,7 +269,7 @@ sub bencher_all {
                         "$timestamp.json",
                         $log->tracef("Writing file %s ...", $filename);
                     File::Slurper::write_text($filename,
-                                              _clean(_encode_json($res)));
+                                              _encode_json(_clean($res)));
                 }
             }; # eval
 
