@@ -21,7 +21,7 @@ $SPEC{':package'} = {
 };
 
 my %args_common = (
-    results_dir => {
+    result_dir => {
         summary => 'Directory to store results files in',
         schema => 'str*',
         req => 1,
@@ -67,233 +67,6 @@ sub _complete_scenario_module {
         word=>$args{word}, ns_prefix=>'Bencher::Scenario');
 }
 
-$SPEC{bencher_all} = {
-    v => 1.1,
-    summary => 'Find all installed Bencher scenarios, run them, log results',
-    description => <<'_',
-
-This script provides a convenience way to run all bencher scenarios and store
-the results as JSON files in a directory, for archival purpose.
-
-By default, bencher results are stored as JSON in the `results_dir` directory,
-with the following name pattern:
-
-    <NAME>-<SUBNAME>.<yyyy>-<mm>-<dd>T<HH>-<MM>-<SS>.json
-    <NAME>-<SUBNAME>.module_startup.<yyyy>-<mm>-<dd>T<HH>-<MM>-<SS>.json
-
-_
-    args => {
-        %args_common,
-        no_lib => {
-            summary => 'Remove entries from @INC',
-            schema => ['bool*', is=>1],
-        },
-        libs => {
-            'x.name.is_plural' => 1,
-            summary => 'Add to the start of @INC',
-            schema => ['array*', of=>'str*'],
-            cmdline_aliases => {
-                I => {code=>sub { $_[0]{libs} //= []; push @{ $_[0]{libs} }, $_[1] }},
-            },
-        },
-
-        excludes => {
-            'x.name.is_plural' => 1,
-            summary => 'Scenarios to exclude',
-            schema => ['array*', of=>'str*'],
-            tags => ['category:filtering'],
-            element_completion => \&_complete_scenario_module,
-        },
-        includes => {
-            'x.name.is_plural' => 1,
-            summary => 'Scenarios to include',
-            schema => ['array*', of=>'str*'],
-            tags => ['category:filtering'],
-            element_completion => \&_complete_scenario_module,
-        },
-        exclude_patterns => {
-            'x.name.is_plural' => 1,
-            summary => 'Scenario patterns to exclude',
-            schema => ['array*', of=>'re*'],
-            tags => ['category:filtering'],
-        },
-        include_patterns => {
-            'x.name.is_plural' => 1,
-            summary => 'Scenario patterns to include',
-            schema => ['array*', of=>'re*'],
-            tags => ['category:filtering'],
-        },
-
-        precision_limit => {
-            summary => 'Precision limit, passed to bencher',
-            schema => ['float*', between=>[0,1]],
-            tags => ['category:bencher'],
-        },
-        note => {
-            summary => 'Additional note, passed to bencher',
-            schema => 'str*',
-            tags => ['category:bencher'],
-        },
-    },
-    features => {
-        dry_run => 1,
-    },
-};
-sub bencher_all {
-    require Bencher::Backend;
-    require File::Slurper;
-
-    my %args = @_;
-
-    # find all installed scenarios
-    my @scenarios;
-    {
-        require PERLANCAR::Module::List;
-
-        local @INC = @INC;
-        @INC = () if $args{no_lib};
-        unshift @INC, reverse(@{$args{libs}}) if $args{libs};
-        $log->tracef("\@INC is %s", \@INC);
-        my $res = PERLANCAR::Module::List::list_modules(
-            'Bencher::Scenario::', {list_modules=>1, recurse=>1});
-        @scenarios = map {s/\ABencher::Scenario:://; $_} sort keys %$res;
-        $log->tracef("Scenario modules found: %s", \@scenarios);
-        return [304, "No scenario modules found under lib/"] unless @scenarios;
-    }
-
-  FILTER:
-    {
-        # normalize
-        my $includes = [
-            map {s!/!::!g; $_} @{ $args{includes} // [] }
-        ];
-        my $excludes = [
-            map {s!/!::!g; $_} @{ $args{excludes} // [] }
-        ];
-
-        my $filtered;
-        if (@$includes) {
-            $filtered++;
-            my @fscenarios;
-            for my $s (@scenarios) {
-                next unless grep {$s eq $_} @$includes;
-                push @fscenarios, $s;
-            }
-            @scenarios = @fscenarios;
-        }
-        if (@$excludes) {
-            $filtered++;
-            my @fscenarios;
-            for my $s (@scenarios) {
-                next if grep {$s eq $_} @$excludes;
-                push @fscenarios, $s;
-            }
-            @scenarios = @fscenarios;
-        }
-        if ($args{include_patterns} && @{ $args{include_patterns} }) {
-            $filtered++;
-            my @fscenarios;
-            for my $s (@scenarios) {
-                next unless grep {ref($_) eq 'Regexp' ? $s =~ $_ : $s =~ /$_/ }
-                    @{ $args{include_patterns} };
-                push @fscenarios, $s;
-            }
-            @scenarios = @fscenarios;
-        }
-        if ($args{exclude_patterns} && @{ $args{exclude_patterns} }) {
-            $filtered++;
-            my @fscenarios;
-            for my $s (@scenarios) {
-                next if grep {ref($_) eq 'Regexp' ? $s =~ $_ : $s =~ /$_/ }
-                    @{ $args{exclude_patterns} };
-                push @fscenarios, $s;
-            }
-            @scenarios = @fscenarios;
-        }
-
-        if ($filtered) {
-            $log->tracef("Scenario modules after filtering: %s", \@scenarios);
-        }
-        return [304, "No scenario modules to run"] unless @scenarios;
-    }
-
-    return [304, "Dry-run"] if $args{-dry_run};
-
-    # bencher'em all!
-    {
-        local @INC = ("lib", @INC);
-        for my $sn (@scenarios) {
-            $log->infof("Processing scenario %s ...", $sn);
-            eval {
-                my $res;
-
-                my $timestamp = strftime("%Y-%m-%dT%H-%M-%S", localtime);
-                my $sn_encoded = $sn; $sn_encoded =~ s/::/-/g;
-
-                $res = Bencher::Backend::bencher(
-                    action => 'bench',
-                    scenario_module => $sn,
-                    precision_limit => $args{precision_limit},
-                    (note => $args{note}) x !!(exists $args{note}),
-                );
-                return err("Can't bench", $res) unless $res->[0] == 200;
-                my $filename = "$args{results_dir}/$sn_encoded.$timestamp.json";
-                $log->tracef("Writing file %s ...", $filename);
-                File::Slurper::write_text($filename,
-                                          _encode_json(_clean($res)));
-
-                $res = Bencher::Backend::bencher(
-                    action => 'show-scenario',
-                    scenario_module => $sn);
-                return err("Can't show scenario", $res) unless $res->[0] == 200;
-                my $scenario = $res->[2];
-
-                $res = Bencher::Backend::bencher(
-                    action => 'list-participant-modules',
-                    scenario_module => $sn);
-                return err("Can't list participant modules", $res)
-                    unless $res->[0] == 200;
-                my $modules = $res->[2];
-
-                if (!$scenario->{module_startup} && @$modules) {
-                    $res = Bencher::Backend::bencher(
-                        action => 'bench',
-                        module_startup => 1,
-                        scenario_module => $sn,
-                        precision_limit => $args{precision_limit},
-                        (note => $args{note}) x !!(exists $args{note}),
-                    );
-                    return err("Can't bench (module_startup)", $res)
-                        unless $res->[0] == 200;
-                    my $filename = "$args{results_dir}/$sn_encoded.module_startup.".
-                        "$timestamp.json",
-                        $log->tracef("Writing file %s ...", $filename);
-                    File::Slurper::write_text($filename,
-                                              _encode_json(_clean($res)));
-                }
-            }; # eval
-
-            if ($@) {
-                $log->errorf("Dies (%s), skipping to the next scenario", $@);
-            }
-        } # for scenario
-    }
-
-    [200];
-}
-
-$SPEC{bencher_all_under_lib} = do {
-    my $meta = clone($SPEC{bencher_all});
-    delete $meta->{args}{no_lib};
-    delete $meta->{args}{libs};
-    $meta->{summary} = "Shortcut for bencher-all --no-lib --lib lib";
-    delete $meta->{description};
-    $meta;
-};
-sub bencher_all_under_lib {
-    bencher_all(@_, no_lib=>1, libs=>["lib"]);
-}
-
 my $re_filename = qr/\A
                      (\w+(?:-(?:\w+))*)
                      (\.module_startup)?
@@ -301,7 +74,7 @@ my $re_filename = qr/\A
                      \.json
                      \z/x;
 
-sub _complete_scenario_in_results_dir {
+sub _complete_scenario_in_result_dir {
     require Complete::Util;
 
     my %args = @_;
@@ -320,11 +93,11 @@ sub _complete_scenario_in_results_dir {
     my $final_args = { %{$res->[2]}, %{$args{args}} };
     #$log->tracef("final args=%s", $final_args);
 
-    return [] unless $final_args->{results_dir};
+    return [] unless $final_args->{result_dir};
 
     my %scenarios;
 
-    opendir my($dh), $final_args->{results_dir} or return undef;
+    opendir my($dh), $final_args->{result_dir} or return undef;
     for my $filename (readdir $dh) {
         $filename =~ $re_filename or next;
         my $sc = $1; $sc =~ s/-/::/g;
@@ -345,13 +118,13 @@ $SPEC{list_bencher_results} = {
             'x.name.is_plural' => 1,
             schema => ['array*', of=>'str*'],
             tags => ['category:filtering'],
-            element_completion => \&_complete_scenario_in_results_dir,
+            element_completion => \&_complete_scenario_in_result_dir,
         },
         exclude_scenarios => {
             'x.name.is_plural' => 1,
             schema => ['array*', of=>'str*'],
             tags => ['category:filtering'],
-            element_completion => \&_complete_scenario_in_results_dir,
+            element_completion => \&_complete_scenario_in_result_dir,
         },
         module_startup => {
             schema => 'bool*',
@@ -408,7 +181,7 @@ $SPEC{list_bencher_results} = {
         },
         {
             summary => 'Delete old results',
-            src => 'cd RESULTS_DIR; list-bencher-results --no-latest | xargs rm',
+            src => 'cd $RESULT_DIR; list-bencher-results --no-latest | xargs rm',
             src_plang => 'bash',
             test => 0,
             'x.doc.show_result' => 0,
@@ -420,9 +193,9 @@ sub list_bencher_results {
 
     my %args = @_;
 
-    my $dir = $args{results_dir};
+    my $dir = $args{result_dir};
 
-    opendir my($dh), $dir or return [500, "Can't read results_dir `$dir`: $!"];
+    opendir my($dh), $dir or return [500, "Can't read result_dir `$dir`: $!"];
 
     # normalize
     my $include_scenarios = [
