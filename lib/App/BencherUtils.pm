@@ -301,6 +301,32 @@ sub list_bencher_results {
     }
 }
 
+$SPEC{list_bencher_scenario_modules} = {
+    v => 1.1,
+    summary => 'List Bencher scenario modules',
+    args => {
+        query => {
+            #schema => ['array*', of=>'str*'],
+            schema => 'str*',
+            pos => 0,
+        },
+    },
+};
+sub list_bencher_scenario_modules {
+    require PERLANCAR::Module::List;
+
+    my %args = @_;
+
+    my $res = PERLANCAR::Module::List::list_modules(
+        "Bencher::Scenario::", {list_modules=>1, recurse=>1});
+    my @res = sort keys %$res;
+    for (@res) { s/^Bencher::Scenario::// }
+
+    # XXX allow specifying query e.g. 'Accessors/*'
+
+    [200, "OK", \@res];
+}
+
 1;
 # ABSTRACT:
 
