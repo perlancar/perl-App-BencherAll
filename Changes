@@ -1,5 +1,18 @@
 Revision history for App-BencherUtils
 
+0.12    2016-05-24 (PERLANCAR)
+
+	- [Removed] Remove bencher-all and bencher-all-under-lib, now that
+	  bencher can also save result to JSON file (--save-result),
+	  bencher-all* can be replaced with a single loop over bencher.
+
+	- Enable utf8 output to avoid 'Wide character in print'.
+
+	- Add CLI: list-bencher-scenario-modules.
+
+	- [Bugfix] We should clean first, then encode to JSON.
+
+
 0.11    2016-03-15 (PERLANCAR)
 
 	- Adjust to Bencher 0.38 (backend split to Bencher::Backend).
