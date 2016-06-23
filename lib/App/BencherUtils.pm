@@ -11,6 +11,7 @@ use Log::Any::IfLOG '$log';
 use Data::Clean::JSON;
 use Function::Fallback::CoreOrPP qw(clone);
 use Perinci::Sub::Util qw(err);
+use PerlX::Maybe;
 use POSIX qw(strftime);
 
 our %SPEC;
@@ -50,6 +51,8 @@ sub _json {
         require JSON::MaybeXS;
         my $json = JSON::MaybeXS->new;
         $json->convert_blessed(1);
+        $json->allow_nonref(1);
+        $json->canonical(1);
     };
     $json;
 }
@@ -238,7 +241,7 @@ sub list_bencher_results {
             "%s.%s.%s",
             $row->{scenario},
             $row->{module_startup} ? 0:1,
-            $row->{cpu},
+            $row->{cpu} // '', # when bencher is run --no-return-meta, there's no cpu information
         );
 
         if ($args{query} && @{ $args{query} }) {
@@ -299,6 +302,73 @@ sub list_bencher_results {
         }
         return [200, "OK", \@rows, $resmeta];
     }
+}
+
+$SPEC{cleanup_old_bencher_results} = {
+    v => 1.1,
+    summary => 'Delete old results',
+    description => <<'_',
+
+By default it will only keep 1 latest result for each scenario for the same CPU
+and the same module versions.
+
+You can use `--dry-run` first to see which files would be deleted without
+actually deleting them.
+
+_
+    args => {
+        %args_common,
+        %args_common_query,
+    },
+    features => {
+        dry_run => 1,
+    },
+};
+sub cleanup_old_bencher_results {
+    require File::Slurper;
+
+    my %args = @_;
+    my $res = list_bencher_results(
+        detail           => 1,
+        maybe result_dir => $args{result_dir},
+        maybe query      => $args{query},
+    );
+    return $res if $res->[0] != 200;
+
+    my @scenarios;
+    for my $scenario (@{ $res->[2] }) {
+        $scenario->{result} = _json->decode(File::Slurper::read_text(
+            "$args{result_dir}/$scenario->{filename}"));
+        push @scenarios, $scenario;
+    }
+
+    my %filenames; # key = scenario|cpu|module_startup(0|1)|json(module_versions), value = [filename, ...]
+    for my $scenario (@scenarios) {
+        my $key = join(
+            "|",
+            $scenario->{scenario},
+            $scenario->{cpu} // '',
+            $scenario->{module_startup} ? 1:0,
+            _encode_json($scenario->{result}[3]{'func.module_versions'}),
+        );
+        #$log->tracef("key = %s", $key);
+        push @{$filenames{$key}}, $scenario->{filename};
+    }
+
+    for my $key (sort keys %filenames) {
+        my $val = $filenames{$key};
+        next unless @$val > 1;
+        $val = [sort @$val];
+        for my $f (@{$val}[0..$#{$val}-1]) {
+            if ($args{-dry_run}) {
+                $log->warnf("[DRY-RUN] Deleting %s ...", $f);
+            } else {
+                $log->warnf("Deleting %s ...", $f);
+                unlink "$args{result_dir}/$f";
+            }
+        }
+    }
+    [200];
 }
 
 $SPEC{list_bencher_scenario_modules} = {
