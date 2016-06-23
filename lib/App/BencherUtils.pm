@@ -59,6 +59,7 @@ sub _json {
 
 sub _encode_json {
     no strict 'refs';
+    no warnings 'once';
     local *version::TO_JSON = sub { "$_[0]" };
     _json->encode($_[0]);
 }
