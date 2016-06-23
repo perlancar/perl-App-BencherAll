@@ -10,6 +10,7 @@ use Log::Any::IfLOG '$log';
 
 use Data::Clean::JSON;
 use Function::Fallback::CoreOrPP qw(clone);
+use Perinci::Object;
 use Perinci::Sub::Util qw(err);
 use PerlX::Maybe;
 use POSIX qw(strftime);
@@ -356,6 +357,7 @@ sub cleanup_old_bencher_results {
         push @{$filenames{$key}}, $scenario->{filename};
     }
 
+    $res = envresmulti();
     for my $key (sort keys %filenames) {
         my $val = $filenames{$key};
         next unless @$val > 1;
@@ -363,13 +365,19 @@ sub cleanup_old_bencher_results {
         for my $f (@{$val}[0..$#{$val}-1]) {
             if ($args{-dry_run}) {
                 $log->warnf("[DRY-RUN] Deleting %s ...", $f);
+                $res->add_result(200, "OK (dry-run)", {item_id=>$f});
             } else {
                 $log->warnf("Deleting %s ...", $f);
-                unlink "$args{result_dir}/$f";
+                if (unlink "$args{result_dir}/$f") {
+                    $res->add_result(200, "OK", {item_id=>$f});
+                } else {
+                    $log->warnf("Can't unlink '%s': %s", $f, $!);
+                    $res->add_result(500, "Can't unlink: $!", {item_id=>$f});
+                }
             }
         }
     }
-    [200];
+    return $res->as_struct;
 }
 
 $SPEC{list_bencher_scenario_modules} = {
