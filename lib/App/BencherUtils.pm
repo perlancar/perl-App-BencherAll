@@ -321,6 +321,11 @@ _
     args => {
         %args_common,
         %args_common_query,
+        num_keep => {
+            summary => 'Number of old results to keep',
+            schema  => ['int*', min=>0],
+            default => 0,
+        },
     },
     features => {
         dry_run => 1,
@@ -330,6 +335,8 @@ sub cleanup_old_bencher_results {
     require File::Slurper;
 
     my %args = @_;
+    my $num_keep = $args{num_keep} // 0;
+
     my $res = list_bencher_results(
         detail           => 1,
         maybe result_dir => $args{result_dir},
@@ -360,9 +367,9 @@ sub cleanup_old_bencher_results {
     $res = envresmulti();
     for my $key (sort keys %filenames) {
         my $val = $filenames{$key};
-        next unless @$val > 1;
+        next unless @$val > $num_keep+1;
         $val = [sort @$val];
-        for my $f (@{$val}[0..$#{$val}-1]) {
+        for my $f (@{$val}[0..$#{$val}-$num_keep-1]) {
             if ($args{-dry_run}) {
                 $log->warnf("[DRY-RUN] Deleting %s ...", $f);
                 $res->add_result(200, "OK (dry-run)", {item_id=>$f});
