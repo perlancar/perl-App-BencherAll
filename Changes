@@ -1,5 +1,10 @@
 Revision history for App-BencherUtils
 
+0.13    2016-06-23 (PERLANCAR)
+
+	- Add utility: cleanup-old-bencher-results.
+
+
 0.12    2016-05-24 (PERLANCAR)
 
 	- [Removed] Remove bencher-all and bencher-all-under-lib, now that
