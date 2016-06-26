@@ -251,7 +251,7 @@ sub list_bencher_results {
           QUERY_WORD:
             for my $q (@{ $args{query} }) {
                 my $lq = lc($q);
-                if (index(lc($row->{cpu}), $lq) == -1 &&
+                if (index(lc($row->{cpu} // ''), $lq) == -1 &&
                         index(lc($row->{filename}), $lq) == -1 &&
                         index(lc($row->{scenario}), $lq) == -1
                 ) {
@@ -290,7 +290,7 @@ sub list_bencher_results {
         $resmeta->{'cmdline.skip_format'} = 1;
         my @content;
         for my $row (@rows) {
-            push @content, "$row->{filename} (cpu: $row->{cpu}):\n";
+            push @content, "$row->{filename} (cpu: ", ($row->{cpu}//''), "):\n";
             push @content, Bencher::Backend::format_result($row->{res});
             push @content, "\n";
         }
