@@ -1,5 +1,11 @@
 Revision history for App-BencherUtils
 
+0.15    2016-06-26 (PERLANCAR)
+
+	- Avoid a couple more of undef warnings when a bench result doesn't
+	  have meta (cpu).
+
+
 0.14    2016-06-23 (PERLANCAR)
 
 	- cleanup-old-bencher-results: add --num-keep option.
