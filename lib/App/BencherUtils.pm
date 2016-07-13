@@ -435,6 +435,42 @@ sub format_bencher_result {
      {'cmdline.skip_format'=>1}];
 }
 
+$SPEC{chart_bencher_result} = {
+    v => 1.1,
+    summary => 'Generate chart of bencher result and display it',
+    args => {
+        json => {
+            summary => 'JSON data',
+            schema => 'str*', # XXX filename
+            req => 1,
+            pos => 0,
+            cmdline_src => 'stdin_or_file',
+        },
+    },
+};
+sub chart_bencher_result {
+    require Bencher::Backend;
+    require Browser::Open;
+    require File::Temp;
+
+    my %args = @_;
+
+    my $envres = _json->decode($args{json});
+
+    my ($temp_fh, $temp_fname) = File::Temp::tempfile();
+
+    $temp_fname .= ".png";
+
+    my $chart_res = Bencher::Backend::chart_result(
+        envres => $envres, output_file => $temp_fname, overwrite=>1);
+
+    return $chart_res if $chart_res->[0] != 200;
+
+    my $view_res = Browser::Open::open_browser("file:$temp_fname");
+
+    $view_res ? [500, "Failed"] : [200, "OK"];
+}
+
 1;
 # ABSTRACT:
 
