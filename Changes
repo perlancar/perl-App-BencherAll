@@ -1,5 +1,10 @@
 Revision history for App-BencherUtils
 
+0.17    2016-07-13 (PERLANCAR)
+
+	- Add utility: chart-bencher-result.
+
+
 0.16    2016-07-13 (PERLANCAR)
 
 	- Add utility: format-bencher-result.
