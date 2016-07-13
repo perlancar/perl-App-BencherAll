@@ -413,6 +413,28 @@ sub list_bencher_scenario_modules {
     [200, "OK", \@res];
 }
 
+$SPEC{format_bencher_result} = {
+    v => 1.1,
+    summary => '',
+    args => {
+        json => {
+            summary => 'JSON data',
+            schema => 'str*', # XXX filename
+            req => 1,
+            pos => 0,
+            cmdline_src => 'stdin_or_file',
+        },
+    },
+};
+sub format_bencher_result {
+    require Bencher::Backend;
+
+    my %args = @_;
+    my $res = _json->decode($args{json});
+    [200, "OK", Bencher::Backend::format_result($res),
+     {'cmdline.skip_format'=>1}];
+}
+
 1;
 # ABSTRACT:
 
