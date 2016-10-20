@@ -422,18 +422,33 @@ sub list_bencher_scenario_modules {
             (my $mod_pm = "$mod.pm") =~ s!::!/!g;
             require $mod_pm;
             my $scenario = ${"$mod\::scenario"};
+            my %participant_types;
+            for my $p (@{ $scenario->{participants} }) {
+                for my $t (qw/code code_template fcall_template
+                              cmdline cmdline_template
+                              perl_cmdline perl_cmdline_template
+                             /) {
+                    if ($p->{$t}) {
+                        $participant_types{$t}++;
+                        last;
+                    }
+                }
+            }
             push @res, {
                 name => $scenario_name,
                 summary => $scenario->{summary},
                 num_participants => scalar(@{$scenario->{participants}}),
                 num_datasets => $scenario->{datasets} ?
                     scalar(@{$scenario->{datasets}}) : '-',
+                participant_types => join(", ", sort keys %participant_types),
             };
         } else {
             push @res, $scenario_name;
         }
     }
-    $resmeta = {'table.fields' => [qw/name summary num_participants num_datasets/]}
+    $resmeta = {'table.fields' => [qw/name summary num_participants num_datasets
+                                      participant_types
+                                     /]}
         if $detail;
 
     [200, "OK", \@res, $resmeta];
