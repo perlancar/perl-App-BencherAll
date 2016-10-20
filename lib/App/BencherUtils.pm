@@ -4,7 +4,7 @@ package App::BencherUtils;
 # VERSION
 
 use 5.010001;
-use strict;
+use strict 'subs', 'vars';
 use warnings;
 use Log::Any::IfLOG '$log';
 
@@ -396,21 +396,47 @@ $SPEC{list_bencher_scenario_modules} = {
             schema => 'str*',
             pos => 0,
         },
+        detail => {
+            schema => 'bool*',
+            cmdline_aliases => {l=>{}},
+        },
     },
 };
 sub list_bencher_scenario_modules {
     require PERLANCAR::Module::List;
 
     my %args = @_;
+    my $q = lc($args{query} // '');
+    my $detail = $args{detail};
 
     my $res = PERLANCAR::Module::List::list_modules(
         "Bencher::Scenario::", {list_modules=>1, recurse=>1});
-    my @res = sort keys %$res;
-    for (@res) { s/^Bencher::Scenario::// }
+    my @res0 = sort keys %$res;
 
-    # XXX allow specifying query e.g. 'Accessors/*'
+    my @res;
+    my $resmeta = {};
+    for my $mod (@res0) {
+        (my $scenario_name = $mod) =~ s/^Bencher::Scenario:://;
+        next if length($q) && index(lc($scenario_name), $q) < 0;
+        if ($detail) {
+            (my $mod_pm = "$mod.pm") =~ s!::!/!g;
+            require $mod_pm;
+            my $scenario = ${"$mod\::scenario"};
+            push @res, {
+                name => $scenario_name,
+                summary => $scenario->{summary},
+                num_participants => scalar(@{$scenario->{participants}}),
+                num_datasets => $scenario->{datasets} ?
+                    scalar(@{$scenario->{datasets}}) : '-',
+            };
+        } else {
+            push @res, $scenario_name;
+        }
+    }
+    $resmeta = {'table.fields' => [qw/name summary num_participants num_datasets/]}
+        if $detail;
 
-    [200, "OK", \@res];
+    [200, "OK", \@res, $resmeta];
 }
 
 $SPEC{format_bencher_result} = {
