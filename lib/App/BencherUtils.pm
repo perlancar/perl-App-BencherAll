@@ -456,7 +456,7 @@ sub list_bencher_scenario_modules {
 
 $SPEC{format_bencher_result} = {
     v => 1.1,
-    summary => '',
+    summary => 'Format bencher raw/JSON result',
     args => {
         json => {
             summary => 'JSON data',
@@ -465,6 +465,7 @@ $SPEC{format_bencher_result} = {
             pos => 0,
             cmdline_src => 'stdin_or_file',
         },
+        # XXX allow customizing formatters
     },
 };
 sub format_bencher_result {
