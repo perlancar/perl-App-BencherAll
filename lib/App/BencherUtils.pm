@@ -513,6 +513,71 @@ sub chart_bencher_result {
     $view_res ? [500, "Failed"] : [200, "OK"];
 }
 
+$SPEC{bencher_module_startup_overhead} = {
+    v => 1.1,
+    summary => 'Accept a list of module names and '.
+        'perform startup overhead benchmark',
+    description => <<'_',
+
+    % bencher-module-startup-overhead Mod1 Mod2 Mod3
+
+is basically a shortcut for creating a scenario like this:
+
+    {
+        module_startup => 1,
+        participants => [
+            {module=>"Mod1"},
+            {module=>"Mod2"},
+            {module=>"Mod3"},
+        ],
+    }
+
+and running that scenario with `bencher`.
+
+_
+    args => {
+        modules => {
+            'x.name.is_plural' => 1,
+            'x.name.singular' => 'module',
+            schema => ['array*', of=>'perl::modname*'],
+            req => 1,
+            pos => 0,
+            greedy => 1,
+            cmdline_src => 'stdin_or_args',
+        },
+    },
+
+};
+sub bencher_module_startup_overhead {
+    my %args = @_;
+
+    my $mods = $args{modules};
+
+    my $scenario = {
+        module_startup => 1,
+        participants => [],
+        (with_process_size => 1) x ($^O =~ /linux/ ? 1:0),
+    };
+    for my $mod (@$mods) {
+        push @{$scenario->{participants}}, {
+            module => $mod,
+        };
+    }
+
+    require Bencher::Backend;
+    my $res = Bencher::Backend::bencher(
+        action => 'bench',
+        scenario => $scenario,
+    );
+    return $res unless $res->[0] == 200;
+
+    my $r = $args{-cmdline_r};
+    return $res if !$r || $r->{format} && $r->{format} !~ /text/;
+
+    [200, "OK", Bencher::Backend::format_result($res),
+     {'cmdline.skip_format'=>1}];
+}
+
 1;
 # ABSTRACT:
 
