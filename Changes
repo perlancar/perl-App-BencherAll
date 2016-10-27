@@ -1,5 +1,15 @@
 Revision history for App-BencherUtils
 
+0.19    2016-10-27 (PERLANCAR)
+
+	- Add utility: bencher-module-startup-overhead.
+
+	- Tweak Rinci metadata: give summary to format-bencher-result.
+
+	- list-bencher-scenario-modules: Add result field
+	  'participant_types'.
+
+
 0.18    2016-10-20 (PERLANCAR)
 
         - list-bencher-scenario-modules: Accept --detail (-l) to show detail of
