@@ -6,7 +6,7 @@ package App::BencherUtils;
 use 5.010001;
 use strict 'subs', 'vars';
 use warnings;
-use Log::Any::IfLOG '$log';
+use Log::ger;
 
 use Data::Clean::JSON;
 use Function::Fallback::CoreOrPP qw(clone);
@@ -96,7 +96,7 @@ sub _complete_scenario_in_result_dir {
 
     # combine from command-line and from config/env
     my $final_args = { %{$res->[2]}, %{$args{args}} };
-    #$log->tracef("final args=%s", $final_args);
+    #log_trace("final args=%s", $final_args);
 
     return [] unless $final_args->{result_dir};
 
@@ -360,7 +360,7 @@ sub cleanup_old_bencher_results {
             $scenario->{module_startup} ? 1:0,
             _encode_json($scenario->{result}[3]{'func.module_versions'}),
         );
-        #$log->tracef("key = %s", $key);
+        #log_trace("key = %s", $key);
         push @{$filenames{$key}}, $scenario->{filename};
     }
 
@@ -371,14 +371,14 @@ sub cleanup_old_bencher_results {
         $val = [sort @$val];
         for my $f (@{$val}[0..$#{$val}-$num_keep-1]) {
             if ($args{-dry_run}) {
-                $log->warnf("[DRY-RUN] Deleting %s ...", $f);
+                log_warn("[DRY-RUN] Deleting %s ...", $f);
                 $res->add_result(200, "OK (dry-run)", {item_id=>$f});
             } else {
-                $log->warnf("Deleting %s ...", $f);
+                log_warn("Deleting %s ...", $f);
                 if (unlink "$args{result_dir}/$f") {
                     $res->add_result(200, "OK", {item_id=>$f});
                 } else {
-                    $log->warnf("Can't unlink '%s': %s", $f, $!);
+                    log_warn("Can't unlink '%s': %s", $f, $!);
                     $res->add_result(500, "Can't unlink: $!", {item_id=>$f});
                 }
             }
@@ -561,6 +561,67 @@ sub bencher_module_startup_overhead {
     for my $mod (@$mods) {
         push @{$scenario->{participants}}, {
             module => $mod,
+        };
+    }
+
+    require Bencher::Backend;
+    my $res = Bencher::Backend::bencher(
+        action => 'bench',
+        scenario => $scenario,
+    );
+    return $res unless $res->[0] == 200;
+
+    my $r = $args{-cmdline_r};
+    return $res if !$r || $r->{format} && $r->{format} !~ /text/;
+
+    [200, "OK", Bencher::Backend::format_result($res),
+     {'cmdline.skip_format'=>1}];
+}
+
+$SPEC{bencher_code} = {
+    v => 1.1,
+    summary => 'Accept a list of codes and '.
+        'perform benchmark',
+    description => <<'_',
+
+    % bencher-code 'code1' 'code2'
+
+is basically a shortcut for creating a scenario like this:
+
+    {
+        participants => [
+            {code_template=>'code1'},
+            {code_template=>'code2'},
+        ],
+    }
+
+and running that scenario with `bencher`.
+
+_
+    args => {
+        codes => {
+            'x.name.is_plural' => 1,
+            'x.name.singular' => 'module',
+            schema => ['array*', of=>'str*'],
+            req => 1,
+            pos => 0,
+            greedy => 1,
+            cmdline_src => 'stdin_or_args',
+        },
+    },
+
+};
+sub bencher_code {
+    my %args = @_;
+
+    my $codes = $args{codes};
+
+    my $scenario = {
+        participants => [],
+    };
+    for my $code (@$codes) {
+        push @{$scenario->{participants}}, {
+            code_template => $code,
         };
     }
 
