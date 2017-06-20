@@ -1,3 +1,10 @@
+0.20    2017-06-20 (PERLANCAR)
+
+	- Add utility: bencher-code.
+
+        - Switch from Log::Any to Log::ger.
+
+
 0.19    2016-10-27 (PERLANCAR)
 
 	- Add utility: bencher-module-startup-overhead.
