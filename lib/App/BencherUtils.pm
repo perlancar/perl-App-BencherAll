@@ -622,6 +622,9 @@ _
         with_process_size => {
             schema => 'bool*',
         },
+        precision => {
+            schema => 'float*',
+        },
     },
 
 };
@@ -645,6 +648,7 @@ sub bencher_code {
         scenario => $scenario,
         code_startup => $args{startup},
         with_process_size => $args{with_process_size},
+        (precision => $args{precision}) x !!(defined $args{precision}),
     );
     return $res unless $res->[0] == 200;
 
