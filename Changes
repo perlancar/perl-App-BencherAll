@@ -1,3 +1,12 @@
+0.21    2017-07-13 (PERLANCAR)
+
+	- Add --without-process-size option to bencher-code &
+	  bencher-module-startup-overhead.
+
+        - Add --startup option to bencher-code to benchmark in code startup
+          overhead mode.
+
+
 0.20    2017-06-20 (PERLANCAR)
 
 	- Add utility: bencher-code.
