@@ -1,3 +1,8 @@
+0.22    2017-07-13 (PERLANCAR)
+
+	- bencher-code: Add --precision option.
+
+
 0.21    2017-07-13 (PERLANCAR)
 
 	- Add --without-process-size option to bencher-code &
