@@ -545,6 +545,9 @@ _
             greedy => 1,
             cmdline_src => 'stdin_or_args',
         },
+        with_process_size => {
+            schema => 'bool*',
+        },
     },
 
 };
@@ -553,10 +556,13 @@ sub bencher_module_startup_overhead {
 
     my $mods = $args{modules};
 
+    my $with_process_size = $args{with_process_size} //
+        $^O =~ /linux/ ? 1:0;
+
     my $scenario = {
         module_startup => 1,
         participants => [],
-        (with_process_size => 1) x ($^O =~ /linux/ ? 1:0),
+        with_process_size => $with_process_size,
     };
     for my $mod (@$mods) {
         push @{$scenario->{participants}}, {
@@ -599,6 +605,11 @@ and running that scenario with `bencher`.
 
 _
     args => {
+        startup => {
+            summary => 'Use code_startup mode instead of normal benchmark',
+            schema => 'bool*',
+            default => 0,
+        },
         codes => {
             'x.name.is_plural' => 1,
             'x.name.singular' => 'module',
@@ -607,6 +618,9 @@ _
             pos => 0,
             greedy => 1,
             cmdline_src => 'stdin_or_args',
+        },
+        with_process_size => {
+            schema => 'bool*',
         },
     },
 
@@ -629,6 +643,8 @@ sub bencher_code {
     my $res = Bencher::Backend::bencher(
         action => 'bench',
         scenario => $scenario,
+        code_startup => $args{startup},
+        with_process_size => $args{with_process_size},
     );
     return $res unless $res->[0] == 200;
 
