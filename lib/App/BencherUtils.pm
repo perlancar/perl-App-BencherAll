@@ -612,7 +612,7 @@ _
         },
         codes => {
             'x.name.is_plural' => 1,
-            'x.name.singular' => 'module',
+            'x.name.singular' => 'code',
             schema => ['array*', of=>'str*'],
             req => 1,
             pos => 0,
