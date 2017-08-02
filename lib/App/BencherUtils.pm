@@ -203,12 +203,14 @@ sub list_bencher_results {
     opendir my($dh), $dir or return [500, "Can't read result_dir `$dir`: $!"];
 
     # normalize
+    ## no critic (ControlStructures::ProhibitMutatingListFunctions)
     my $include_scenarios = [
         map {s!/!::!g; $_} @{ $args{include_scenarios} // [] }
     ];
     my $exclude_scenarios = [
         map {s!/!::!g; $_} @{ $args{exclude_scenarios} // [] }
     ];
+    ## use critic
 
     my %latest; # key = module+(module_startup)+cpu, value = latest row
     my @rows;
