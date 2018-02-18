@@ -661,6 +661,40 @@ sub bencher_code {
      {'cmdline.skip_format'=>1}];
 }
 
+$SPEC{bencher_for} = {
+    v => 1.1,
+    summary => 'List distributions that benchmarks specified modules',
+    description => <<'_',
+
+This utility consults <prog:lcpan> (local indexed CPAN mirror) to check if there
+are distributions that benchmarks a specified module. This is done by checking
+the presence of a dependency with the relationship `x_benchmarks`.
+
+_
+    args => {
+        modules => {
+            schema => ['array*', of=>'perl::modname*'],
+            req => 1,
+            pos => 0,
+            greedy => 1,
+        },
+    },
+
+};
+sub bencher_for {
+    require App::lcpan::Call;
+
+    my %args = @_;
+
+    my $res = App::lcpan::Call::call_lcpan_script(
+        argv => ["rdeps", "--phase", "x_benchmarks", @{ $args{modules} }],
+    );
+
+    return $res unless $res->[0] == 200;
+
+    return [200, "OK", [map {$_->{dist}} @{ $res->[2] }]];
+}
+
 1;
 # ABSTRACT:
 
