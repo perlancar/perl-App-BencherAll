@@ -536,12 +536,27 @@ is basically a shortcut for creating a scenario like this:
 
 and running that scenario with `bencher`.
 
+To specify import arguments, you can use:
+
+    % bencher-module-startup-overhead Mod1 Mod2=arg1,arg2
+
+which will translate to this Bencher scenario:
+
+    {
+        module_startup => 1,
+        participants => [
+            {module=>"Mod1"},
+            {module=>"Mod2", import_args=>'arg1,arg2'},
+        ],
+    }
+
+
 _
     args => {
         modules => {
             'x.name.is_plural' => 1,
             'x.name.singular' => 'module',
-            schema => ['array*', of=>'perl::modname*'],
+            schema => ['array*', of=>'perl::modargs*'],
             req => 1,
             pos => 0,
             greedy => 1,
@@ -567,8 +582,13 @@ sub bencher_module_startup_overhead {
         with_process_size => $with_process_size,
     };
     for my $mod (@$mods) {
+        my $import_args;
+        if ($mod =~ s/=(.*)//) {
+            $import_args = $1;
+        }
         push @{$scenario->{participants}}, {
             module => $mod,
+            (import_args => $import_args) x !!defined($import_args),
         };
     }
 
