@@ -8,7 +8,7 @@ use strict 'subs', 'vars';
 use warnings;
 use Log::ger;
 
-use Data::Clean::JSON;
+use Data::Clean::ForJSON;
 use Function::Fallback::CoreOrPP qw(clone);
 use Perinci::Object;
 use Perinci::Sub::Util qw(err);
@@ -43,7 +43,7 @@ my %args_common_query = (
 );
 
 sub _clean {
-    state $cleanser = Data::Clean::JSON->get_cleanser;
+    state $cleanser = Data::Clean::ForJSON->get_cleanser;
     $cleanser->clone_and_clean($_[0]);
 }
 
