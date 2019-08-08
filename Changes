@@ -1,3 +1,10 @@
+0.242   2019-08-08  Released-By: PERLANCAR; Urgency: high
+
+	- No functional changes.
+
+	- Adjust to renamed dep: Data::Clean::JSON -> Data::Clean::ForJSON.
+
+
 0.241   2018-04-03  Released-By: PERLANCAR
 
 	- bencher-module-startup-overhead: Allow imports.
