@@ -1,7 +1,12 @@
-0.243   2021-07-23  Released-By: PERLANCAR; Urgency: medium
+0.243.1 2021-07-23  Released-By: PERLANCAR; Urgency: medium
 
 	- [cli format-bencher-result] Add option --as to allow formatting
 	  as Benchmark.pm result.
+
+        - UPDATE: rename release from 0.243 to 0.243.1 due to conflict.
+
+
+0.243   2021-01-20  Released-By: PERLANCAR; Urgency: medium
 
 	- Add CLI: gen-bencher-scenario-from-cpanmodules.
 
