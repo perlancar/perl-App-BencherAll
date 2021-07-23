@@ -469,7 +469,10 @@ $SPEC{format_bencher_result} = {
             pos => 0,
             cmdline_src => 'stdin_or_file',
         },
-        # XXX allow customizing formatters
+        as => {
+            schema => ['str*', in=>[qw/bencher_table benchmark_pm_table/]],
+            default => 'bencher_table',
+        },
     },
 };
 sub format_bencher_result {
@@ -477,7 +480,10 @@ sub format_bencher_result {
 
     my %args = @_;
     my $res = _json->decode($args{json});
-    [200, "OK", Bencher::Backend::format_result($res),
+    [200, "OK", Bencher::Backend::format_result($res, undef, {
+        ($args{as} eq 'bencher_table' ? (render_as_text_table=>1) : ()),
+        ($args{as} eq 'benchmark_pm_table' ? (render_as_benchmark_pm=>1) : ()),
+    }),
      {'cmdline.skip_format'=>1}];
 }
 
