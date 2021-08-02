@@ -2,3 +2,4 @@ App-BencherUtils-*
 .build
 *~
 nytprof*
+.DS_Store
