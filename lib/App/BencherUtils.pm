@@ -1,10 +1,5 @@
 package App::BencherUtils;
 
-# AUTHORITY
-# DATE
-# DIST
-# VERSION
-
 use 5.010001;
 use strict 'subs', 'vars';
 use warnings;
@@ -16,6 +11,11 @@ use Perinci::Object;
 use Perinci::Sub::Util qw(err);
 use PerlX::Maybe;
 use POSIX qw(strftime);
+
+# AUTHORITY
+# DATE
+# DIST
+# VERSION
 
 our %SPEC;
 
@@ -407,13 +407,13 @@ $SPEC{list_bencher_scenario_modules} = {
     },
 };
 sub list_bencher_scenario_modules {
-    require PERLANCAR::Module::List;
+    require Module::List::Tiny;
 
     my %args = @_;
     my $q = lc($args{query} // '');
     my $detail = $args{detail};
 
-    my $res = PERLANCAR::Module::List::list_modules(
+    my $res = Module::List::Tiny::list_modules(
         "Bencher::Scenario::", {list_modules=>1, recurse=>1});
     my @res0 = sort keys %$res;
 
