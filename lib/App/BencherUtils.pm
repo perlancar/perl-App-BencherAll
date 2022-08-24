@@ -61,7 +61,7 @@ sub _json {
 }
 
 sub _encode_json {
-    no strict 'refs';
+    no strict 'refs'; ## no critic: TestingAndDebugging::ProhibitNoStrict
     no warnings 'once';
     local *version::TO_JSON = sub { "$_[0]" };
     _json->encode($_[0]);
@@ -89,12 +89,12 @@ sub _complete_scenario_in_result_dir {
     my $cmdline = $args{cmdline};
     my $r = $args{r};
 
-    return undef unless $cmdline;
+    return unless $cmdline;
 
     $r->{read_config} = 1;
 
     my $res = $cmdline->parse_argv($r);
-    return undef unless $res->[0] == 200;
+    return unless $res->[0] == 200;
 
     # combine from command-line and from config/env
     my $final_args = { %{$res->[2]}, %{$args{args}} };
@@ -104,7 +104,7 @@ sub _complete_scenario_in_result_dir {
 
     my %scenarios;
 
-    opendir my($dh), $final_args->{result_dir} or return undef;
+    opendir my($dh), $final_args->{result_dir} or return;
     for my $filename (readdir $dh) {
         $filename =~ $re_filename or next;
         my $sc = $1; $sc =~ s/-/::/g;
